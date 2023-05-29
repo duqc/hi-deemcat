@@ -1,79 +1,120 @@
+#-------------------------------------------------------------------------------
+# Name:        module1
+# Purpose:
+#
+# Author:      amanz
+#
+# Created:     23-05-2023
+# Copyright:   (c) amanz 2023
+# Licence:     <your licence>
+#-------------------------------------------------------------------------------
+#all hail king pygame
 import pygame
-from pygame.locals import *
 
+#imports
 import keyboard
-
 import math
-
 import random
+import time
 
+#initialize pygame
 pygame.init()
 
 
-r1,g1,b1 = 0,0,255
+def calculation(n, pos1, xdeviance, ydeviance,sample):
+                return abs(math.ceil(pos1[0] + xdeviance*(n/(sample*2)))), abs(math.ceil(pos1[1] + (ydeviance*(n/(sample*2)))))
 
 
-fps = 60
+def drawline(pos1,pos2,r,g,b):
+
+    #editable variables
+    samplesize = 100
+
+    xdeviance = pos2[0] - pos1[0]
+    ydeviance = pos2[1] - pos1[1]
+
+    for n in range(samplesize*2):
+        drawatlocation(calculation(n+1, pos1, xdeviance,ydeviance,samplesize),r,g,b)
+
+
+def drawatlocation(position,r1,g1,b1):
+    global grid
+    global brush
+
+    if not position[0] > len(grid)-math.ceil(brush/2) and not position[1] > len(grid[1])-math.ceil(brush/2):
+        for x in range(brush):
+            for y in range(brush):
+                if not keyboard.is_pressed('b'):
+                    grid[position[0]+(x-math.floor(brush/2))][position[1]+(y-math.floor(brush/2))] = [r1,g1,b1]
+                else:
+                    grid[position[0]+(x-math.floor(brush/2))][position[1]+(y-math.floor(brush/2))] = [0,0,0]
+
+theticker = False
+
+fps = 6000
 fpsClock = pygame.time.Clock()
 
 width, height = 1080, 720
 screen = pygame.display.set_mode((width, height))
 
-pixel_with_margin = 4
-margin = 0
-brush = 10
+#set default brush colours
+r1,g1,b1 = 0,0,255
 
+#user set variables. pixel with margin is for convinience and sets how large the grid will eventually be. margin is margin and brush is brush size (slightly broken)
+pixeltotal = 8
+margin = 0
+brush = 3
+
+
+#initialize the array with x and y, and set all the colours to white. able to adapt to new pixel sizes and screen widths/ heights
 grid = []
-for y in range(math.ceil(width/pixel_with_margin)+2):
+for y in range(math.ceil(width/pixeltotal)+math.ceil(brush/2)+1):
     grid.append([])
-    for x in range(math.ceil(height/pixel_with_margin)+2):
+    for x in range(math.ceil(height/pixeltotal)+math.ceil(brush/2)+1):
+        #change this to [0,0,0] for a black background
         grid[y].append([255,255,255])
+
 
 # Game loop.
 while True:
+    #fill screen with black
     screen.fill((0, 0, 0))
+    #check if user quits
     for event in pygame.event.get():
-        if event.type == QUIT:
+        if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-    if keyboard.is_pressed("l"):
-        r1 = random.randint(0,255)
-        g1 = random.randint(0,255)
-        b1 = random.randint(0,255)
 
 
+    clickpos = pygame.mouse.get_pos()
+    ecks = math.floor(clickpos[0]/pixeltotal)
+    why = math.floor(clickpos[1]/pixeltotal)
+    cursorpos = [ecks,why]
+
+    #if q, w, or e pressed, change brush colour to red, green or blue accordingly.
     if keyboard.is_pressed("q"):
-        r1 = 255
-        g1 = 0
-        b1 = 0
+        r1,g1,b1 = 255,0,0
     if keyboard.is_pressed("w"):
-        r1 = 0
-        g1 = 255
-        b1 = 0
+        r1,g1,b1 = 0,255,0
     if keyboard.is_pressed("e"):
-        r1 = 0
-        g1 = 0
-        b1 = 255
+        r1,g1,b1 = 0,0,255
 
-
-    ycounter = 0
 
     if pygame.mouse.get_pressed()[0]:
-        clickpos = pygame.mouse.get_pos()
-        ecks = math.floor(clickpos[0]/pixel_with_margin)
-        why = math.floor(clickpos[1]/pixel_with_margin)
+        drawatlocation(cursorpos,r1,g1,b1)
 
-        if not ecks > len(grid)-2:
-            if not why > len(grid[1])-2:
-                for x in range(brush):
-                    for y in range(brush):
-                        if not keyboard.is_pressed('b'):
-                            grid[ecks+(x-1)][why+(y-math.ceil(brush/2))] = [r1,g1,b1]
-                        else:
-                            grid[ecks+(x-1)][why+(y-math.ceil(brush/2))] = [0,0,0]
-
+    if keyboard.is_pressed("k") or theticker == True:
+        if theticker == False:
+            theticker = True
+            cursorpos1 = cursorpos
+            time.sleep(1)
+        else:
+            theticker = False
+            cursorpos2 = cursorpos
+            drawline(cursorpos1,cursorpos2,r1,g1,b1)
 
 
+    #custom post processing algorithm. when space pressed, iterate through each pixel and average the pixels around it.
     if keyboard.is_pressed("space"):
         for wh in range(len(grid)-1):
             for ex in range(len(grid[wh])-1):
@@ -92,17 +133,16 @@ while True:
                 grid[wh][ex][1] = lolg
                 grid[wh][ex][2] = lolb
 
-
-
-
-
-    for y in range(math.ceil(width/pixel_with_margin)):
+    #finally, draw the whole thing.
+    ycounter = 0
+    for y in range(math.ceil(width/pixeltotal)):
         xcounter = 0
-        for x in range(math.ceil(height/pixel_with_margin)):
-            pygame.draw.rect(screen,grid[ycounter][xcounter],(1+(pixel_with_margin*y),(1+(x*pixel_with_margin)),pixel_with_margin-margin,pixel_with_margin-margin))
+        for x in range(math.ceil(height/pixeltotal)):
+            pygame.draw.rect(screen,grid[ycounter][xcounter],(1+(pixeltotal*y),(1+(x*pixeltotal)),pixeltotal-margin,pixeltotal-margin))
             xcounter += 1
         ycounter += 1
 
+    #also draw brush colour in top left.
     pygame.draw.circle(screen, (r1,g1,b1), (20,20), 10)
 
     pygame.display.flip()
